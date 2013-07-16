@@ -1,0 +1,123 @@
+<!doctype html>
+<html>
+	<head>
+	    <meta charset="utf-8">
+	    <title>WebRTC Streaming Media from Files</title>
+	    <script src="adapter.js"></script>
+	    <script src="http://localhost:8000/socket.io/socket.io.js"></script>
+	</head>
+
+	<body>
+		<input type="file" id="file">
+		<br/>
+		<p>Follow the steps to make streaming mp3 work.</p>
+		<ul>
+			<li>Try playing an mp3 by selecting it. In the file selector above.</li>
+			<li>It does not work. Now start playing video from user media by clicking the button:
+				<input type="button" onclick="javascript:startUserMedia()" value="Start video"/>
+			</li>
+			<li>This does work. Stop the video by clicking the button:
+				<input type="button" onclick="javascript:stopCurrentStream()" value="Stop video"/>
+			</li>
+			<li>Now try playing a mp3 file again. Select it with the file selector above.</li>
+		</ul>
+	</body>
+
+    <script lang="javascript">
+		// Check for the various File API support.
+		if (window.File
+			&& window.FileReader 
+			&& window.FileList 
+			&& window.Blob
+			&& RTCPeerConnection
+			&& (window.AudioContext || window.webkitAudioContext)) {
+			document.getElementById('file').addEventListener('change', handleFileSelect, false);
+		} else {
+			alert('The required APIs are not fully supported in this browser.');
+		}
+
+		window.AudioContext = window.AudioContext || window.webkitAudioContext;
+
+		var socket = io.connect('http://localhost:8000/server');
+
+		var context = new AudioContext();
+
+		var pc_config = {"iceServers": [{"url": "stun:stun.l.google.com:19302"}]};
+		var pc = new RTCPeerConnection(pc_config);
+		pc.onicecandidate = function(event) {
+			socket.emit('msg', { type: 'candidate', candidate: event.candidate });
+		}
+
+		socket.on('msg', function(data) {
+			console.log('Received message: ' + JSON.stringify(data));
+
+			if (data.type === 'candidate') {
+				if (data.candidate) {
+					pc.addIceCandidate(new RTCIceCandidate(data.candidate));
+				}
+			} else if (data.type === 'sdp') {
+				pc.setRemoteDescription(new RTCSessionDescription(data.sdp));
+			}
+		});
+
+		var currentStream;
+
+		// initially set up a stream from getUserMedia
+		function startUserMedia() {
+	   		window.getUserMedia({ video: true, audio: false }, function(stream) {
+	   			currentStream = stream;
+				pc.addStream(currentStream);
+				pc.createOffer(setLocalAndSendMessage, failed);
+	   		}, failed);
+		}
+
+		function stopCurrentStream() {
+    		if (currentStream) {
+	    		pc.removeStream(currentStream);
+	    		currentStream = undefined;
+    		}
+		}
+
+    	function handleFileSelect(event) {
+    		// stop the current stream.
+    		if (currentStream) {
+	    		pc.removeStream(currentStream);
+	    		currentStream = undefined;
+    		}
+
+    		var file = event.target.files[0];
+
+    		if (file) {
+    			if (file.type.match('audio*') || file.type.match('video*')) {
+    				var reader = new FileReader();
+
+    				reader.onload = (function(readEvent) {
+    					context.decodeAudioData(readEvent.target.result, function(buffer) {
+	    					var source = context.createBufferSource();
+	    					var destination = context.createMediaStreamDestination();
+	    					source.buffer = buffer;
+							source.start(0);
+	    					source.connect(destination);
+	    					pc.addStream(destination.stream);
+	    					currentStream = destination.stream;
+	    					pc.createOffer(setLocalAndSendMessage, failed);
+    					});
+    				});
+
+    				reader.readAsArrayBuffer(file);
+    			}
+    		}
+    	}
+
+    	function setLocalAndSendMessage(desc) {
+			pc.setLocalDescription(desc);
+			socket.emit('msg', { type: 'sdp', sdp: desc} );
+    	}
+
+		function failed(code) {
+    		log("Failure callback: " + code);
+  		}
+
+    </script>
+
+</html>
