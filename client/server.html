@@ -106,6 +106,8 @@
   		}
 
     	function handleFileSelect(event) {
+    		stopStream();
+
     		var file = document.getElementById('file').files[0];
 
     		if (file) {
@@ -140,7 +142,6 @@
 			remoteDestination = context.createMediaStreamDestination();
 			mediaSource.connect(remoteDestination);
 
-
 			for (var peer in peers) {
 				startPlayingIfPossible(peer);
 			}
@@ -148,10 +149,13 @@
 
     	function stopStream() {
     		for (var peer in peers) {
-    			peers[peer].peerconnection.removeStream(peers[peer].stream);
+    			if (peers[peer].stream) {
+	    			peers[peer].peerconnection.removeStream(peers[peer].stream);
+	    			peers[peer].stream = undefined;
+    			}
     		}
 
-			mediaSource.stop(0);
+    		if (mediaSource) mediaSource.stop(0);
     	}
 
     	function changeVolume(element) {
