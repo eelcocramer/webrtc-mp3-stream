@@ -4,7 +4,7 @@
 	    <meta charset="utf-8">
 	    <title>WebRTC Streaming Media from Files</title>
    	    <script src="adapter.js"></script>
-	    <script src="http://localhost:8000/socket.io/socket.io.js"></script>
+		<script src="/socket.io/socket.io.js"></script>
 	</head>
 
 	<body>
@@ -14,64 +14,70 @@
 	</body>
 
     <script lang="javascript">
-		// Check for the various File API support.
-		if (window.File
-			&& window.FileReader 
-			&& window.FileList 
-			&& window.Blob
-			&& RTCPeerConnection
-			&& (window.AudioContext || window.webkitAudioContext)) {
+		var urlParams;
+		(window.onpopstate = function () {
+		    var match,
+		        pl     = /\+/g,  // Regex for replacing addition symbol with a space
+		        search = /([^&=]+)=?([^&]*)/g,
+		        decode = function (s) { return decodeURIComponent(s.replace(pl, " ")); },
+		        query  = window.location.search.substring(1);
+
+		    urlParams = {};
+		    while (match = search.exec(query))
+		       urlParams[decode(match[1])] = decode(match[2]);
+		})();
+
+		if (RTCPeerConnection) {
 		} else {
 			alert('The required APIs are not fully supported in this browser.');
 		}
 
-		window.AudioContext = window.AudioContext || window.webkitAudioContext;
-
-		var socket = io.connect('http://localhost:8000/client');
-
-		var context = new AudioContext();
-
 		var pc_config = {"iceServers": [{"url": "stun:stun.l.google.com:19302"}]};
+
+		var socket = io.connect();
+
+		var myId;
+		var to = urlParams.id;
+
+		socket.on('your-id', function(id) {
+			myId = id;
+			console.log('id = ' + id);
+			socket.emit('logon', { from: myId, to: to } );
+		});
+
+		socket.on('error', function(message) {
+			alert(message);
+		});
+	
 		var pc = new RTCPeerConnection(pc_config);
 
 		pc.onicecandidate = function(event) {
-			socket.emit('msg', { type: 'candidate', candidate: event.candidate });
+			socket.emit('message', { from: myId, to: to, data: { type: 'candidate', candidate: event.candidate } });
 		}
 
-		socket.on('msg', function(data) {
-			console.log('Received message: ' + JSON.stringify(data));
+		socket.on('message', function(message) {
+			console.log('Received message: ' + JSON.stringify(message.data));
 			
-			if (data.type === 'candidate') {
-				if (data.candidate) {
-					pc.addIceCandidate(new RTCIceCandidate(data.candidate));
+			if (message.data.type === 'candidate') {
+				if (message.data.candidate) {
+					pc.addIceCandidate(new RTCIceCandidate(message.data.candidate));
 				}
-			} else if (data.type === 'sdp') {
-				pc.setRemoteDescription(new RTCSessionDescription(data.sdp));
-				pc.createAnswer(setLocalAndSendMessage, failed);
+			} else if (message.data.type === 'sdp') {
+				pc.setRemoteDescription(new RTCSessionDescription(message.data.sdp));
+				pc.createAnswer(function(desc) {
+					pc.setLocalDescription(desc);
+					socket.emit('message', { from: myId, to: message.from, data: { type: 'sdp', sdp: desc} } );
+				}, failed);
 			}
 		});
 
-    	pc.onaddstream = gotRemoteStream;
+	    pc.onaddstream = gotRemoteStream;
 
     	function gotRemoteStream(event) {
     		console.log('Got remote stream.');
-    		var player = new Audio();
-    		//document.getElementById('player');
+    		var player = document.getElementById('player');
     		attachMediaStream(player, event.stream);
     		player.play();
-    		// player.play();
-			// var mediaStreamSource = context.createMediaStreamSource(event.stream);
-			// mediaStreamSource.connect(context.destination);
-    	}
-
-    	function setLocalAndSendMessage(desc) {
-			pc.setLocalDescription(desc);
-			socket.emit('msg', { type: 'sdp', sdp: desc} );
-    	}
-
-    	function logEvent(event) {
-    		console.log('Event received.');
-    		console.log(event);
     	}
 
    	  	function failed(code) {

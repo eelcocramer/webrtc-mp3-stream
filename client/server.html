@@ -4,23 +4,20 @@
 	    <meta charset="utf-8">
 	    <title>WebRTC Streaming Media from Files</title>
 	    <script src="adapter.js"></script>
-	    <script src="http://localhost:8000/socket.io/socket.io.js"></script>
+		<script src="/socket.io/socket.io.js"></script>
 	</head>
 
 	<body>
-		<input type="file" id="file">
+		<p>
+			<input type="button" onclick="toggleMute();" value="Mute/Unmute"/>
+			<input type="button" onclick="togglePlay();" value="Pause/Play"/>
+			Volume:
+			<input type="range" min="0" max="100" value="100" oninput="changeVolume(this);"/>
+		</p>
+		<input type="file" id="file"/>
 		<br/>
-		<p>Follow the steps to make streaming mp3 work.</p>
-		<ul>
-			<li>Try playing an mp3 by selecting it. In the file selector above.</li>
-			<li>It does not work. Now start playing video from user media by clicking the button:
-				<input type="button" onclick="javascript:startUserMedia()" value="Start video"/>
-			</li>
-			<li>This does work. Stop the video by clicking the button:
-				<input type="button" onclick="javascript:stopCurrentStream()" value="Stop video"/>
-			</li>
-			<li>Now try playing a mp3 file again. Select it with the file selector above.</li>
-		</ul>
+		<input type="text" id="link" disabled/><input type="button" id="openLink" value="Open"/>
+		<br/>
 	</body>
 
     <script lang="javascript">
@@ -32,75 +29,98 @@
 			&& RTCPeerConnection
 			&& (window.AudioContext || window.webkitAudioContext)) {
 			document.getElementById('file').addEventListener('change', handleFileSelect, false);
+			window.AudioContext = window.AudioContext || window.webkitAudioContext;
 		} else {
 			alert('The required APIs are not fully supported in this browser.');
 		}
 
-		window.AudioContext = window.AudioContext || window.webkitAudioContext;
-
-		var socket = io.connect('http://localhost:8000/server');
+		var socket = io.connect();
 
 		var context = new AudioContext();
+		var currentStream;
 
 		var pc_config = {"iceServers": [{"url": "stun:stun.l.google.com:19302"}]};
-		var pc = new RTCPeerConnection(pc_config);
-		pc.onicecandidate = function(event) {
-			socket.emit('msg', { type: 'candidate', candidate: event.candidate });
-		}
 
-		socket.on('msg', function(data) {
-			console.log('Received message: ' + JSON.stringify(data));
+		var peers = {};
+		var myId;
 
-			if (data.type === 'candidate') {
-				if (data.candidate) {
-					pc.addIceCandidate(new RTCIceCandidate(data.candidate));
+		var gainNode = context.createGain();
+		gainNode.connect(context.destination);
+		var mediaSource, mediaBuffer, remoteDestination;
+		var muted, start, stop;
+
+		socket.on('your-id', function(id) {
+			myId = id;
+			console.log('id = ' + id);
+
+			var clientURL = window.location.protocol + '//' + window.location.host + '/client.html?id=' + myId;
+			document.getElementById('link').value = clientURL;
+			document.getElementById('openLink').addEventListener('click', function(event) {
+				var win = window.open(clientURL, '_blank');
+				win.focus();
+			}, false);
+		});
+
+		socket.on('disconnected', function(from) {
+			peers[from] = undefined;
+		});
+
+		socket.on('logon', function(message) {
+			pc = new RTCPeerConnection(pc_config);
+			
+			pc.onicecandidate = function(event) {
+				socket.emit('message', { from: myId, to: message.from, data: { type: 'candidate', candidate: event.candidate } } );
+			}
+
+			peers[message.from] = { peerconnection: pc, stream: undefined };
+			startPlayingIfPossible(message.from);
+		});
+
+		socket.on('message', function(message) {
+			console.log('Received message: ' + JSON.stringify(message.data));
+
+			if (message.data.type === 'candidate') {
+				if (message.data.candidate) {
+					peers[message.from].peerconnection.addIceCandidate(new RTCIceCandidate(message.data.candidate));
 				}
-			} else if (data.type === 'sdp') {
-				pc.setRemoteDescription(new RTCSessionDescription(data.sdp));
+			} else if (message.data.type === 'sdp') {
+				peers[message.from].peerconnection.setRemoteDescription(new RTCSessionDescription(message.data.sdp));
 			}
 		});
 
-		var currentStream;
 
-		// initially set up a stream from getUserMedia
-		function startUserMedia() {
-	   		window.getUserMedia({ video: true, audio: false }, function(stream) {
-	   			currentStream = stream;
-				pc.addStream(currentStream);
-				pc.createOffer(setLocalAndSendMessage, failed);
-	   		}, failed);
+		function startPlayingIfPossible(from) {
+			// add the stream to the peerconnection for this connection
+			if (mediaSource && remoteDestination) {
+				peers[from].peerconnection.addStream(remoteDestination.stream);
+				peers[from].stream = remoteDestination.stream;
+				peers[from].peerconnection.createOffer(function(desc) {
+					peers[from].peerconnection.setLocalDescription(desc);
+					socket.emit('message', { from: myId, to: from, data: { type: 'sdp', sdp: desc } });
+				}, failed);
+			}
 		}
 
-		function stopCurrentStream() {
-    		if (currentStream) {
-	    		pc.removeStream(currentStream);
-	    		currentStream = undefined;
-    		}
-		}
+		function failed(code) {
+    		log("Failure callback: " + code);
+  		}
 
     	function handleFileSelect(event) {
-    		// stop the current stream.
-    		if (currentStream) {
-	    		pc.removeStream(currentStream);
-	    		currentStream = undefined;
-    		}
-
-    		var file = event.target.files[0];
+    		var file = document.getElementById('file').files[0];
 
     		if (file) {
-    			if (file.type.match('audio*') || file.type.match('video*')) {
+    			if (file.type.match('audio*')) {
     				var reader = new FileReader();
 
     				reader.onload = (function(readEvent) {
     					context.decodeAudioData(readEvent.target.result, function(buffer) {
-	    					var source = context.createBufferSource();
-	    					var destination = context.createMediaStreamDestination();
-	    					source.buffer = buffer;
-							source.start(0);
-	    					source.connect(destination);
-	    					pc.addStream(destination.stream);
-	    					currentStream = destination.stream;
-	    					pc.createOffer(setLocalAndSendMessage, failed);
+    						if (mediaSource) {
+    							mediaSource.stop(0);
+    						}
+
+    						mediaBuffer = buffer;
+							playStream();
+							start = Date.now();
     					});
     				});
 
@@ -109,15 +129,58 @@
     		}
     	}
 
-    	function setLocalAndSendMessage(desc) {
-			pc.setLocalDescription(desc);
-			socket.emit('msg', { type: 'sdp', sdp: desc} );
+    	function playStream(offset) {
+    		offset = offset ? offset : 0;
+			mediaSource = context.createBufferSource();
+			mediaSource.buffer = mediaBuffer;
+			mediaSource.start(0, offset / 1000);
+			mediaSource.connect(gainNode);
+
+			// setup remote stream
+			remoteDestination = context.createMediaStreamDestination();
+			mediaSource.connect(remoteDestination);
+
+
+			for (var peer in peers) {
+				startPlayingIfPossible(peer);
+			}
     	}
 
-		function failed(code) {
-    		log("Failure callback: " + code);
-  		}
+    	function stopStream() {
+    		for (var peer in peers) {
+    			peers[peer].peerconnection.removeStream(peers[peer].stream);
+    		}
 
+			mediaSource.stop(0);
+    	}
+
+    	function changeVolume(element) {
+    		var volume = element.value;
+    		var fraction = parseInt(element.value, 10) / parseInt(element.max, 10);
+    		gainNode.gain.value = fraction * fraction;
+    	}
+
+    	function toggleMute() {
+    		if (muted) {
+    			gainNode.gain.value = muted;
+    			muted = undefined;
+    		} else {
+    			muted = gainNode.gain.value;
+    			gainNode.gain.value = 0;
+    		}
+    	}
+
+    	function togglePlay() {
+    		if (stop) {
+    			var offset = stop - start;
+    			playStream(offset);
+    			start = Date.now() - offset;
+    			stop = undefined;
+    		} else {
+    			stopStream(offset);
+    			stop = Date.now();
+    		} 
+    	}
     </script>
 
 </html>

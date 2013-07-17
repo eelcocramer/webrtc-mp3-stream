@@ -1,30 +1,58 @@
-var io = require('socket.io').listen(8000);
+var socketIO = require('socket.io');
+var uuid = require('node-uuid');
+var static = require('node-static');
 
-// io.sockets.on('connection', function (socket) {
-// 	socket.on('set name', function (name) {
-// 		sockets[name] = socket;
-// 	});
+//
+// Create a node-static server instance to serve the './public' folder
+//
+var file = new(static.Server)('../client');
 
-// 	socket.on('private message', function(from, to, msg) {
-// 		console.log('Received message from ' + from + ' to ' + to + '.');
-// 		var destination = sockets[to];
+var server = require('http').createServer(function (request, response) {
+    request.addListener('end', function () {
+        //
+        // Serve files!
+        //
+        file.serve(request, response);
+    }).resume();
+});
 
-// 		if (destination) {
-// 			socket.emit('private message', { from: from, msg: msg });
-// 		}
-// 	});
-// });
+var io = socketIO.listen(server);
 
-io.of('/server').on('connection', function(socket) {
-	socket.on('msg', function(data) {
-		console.log('received: ' + JSON.stringify(data));
-		io.of('/client').emit('msg', data);
+server.listen(8080);
+
+var sockets = {};
+
+io.sockets.on('connection', function(socket) {
+	var id;
+
+	do {
+		id = uuid.v4();
+	} while (sockets[id]);
+
+	// we have a unique identifier that can be sent to the client
+
+	sockets[id] = socket;
+	socket.emit('your-id', id);
+
+	socket.on('disconnect', function() {
+		sockets[socket] = undefined;
+	});
+
+	socket.on('message', function(message) {
+		if (sockets[message.to]) {
+			sockets[message.to].emit('message', message);
+		} else {
+			socket.emit('disconnected', message.from);
+		}
+	});
+
+	socket.on('logon', function(message) {
+		if (sockets[message.to]) {
+			sockets[message.to].emit('logon', message);
+		} else {
+			socket.emit('error', 'Does not exsist at server.');
+		}
 	});
 });
 
-io.of('/client').on('connection', function(socket) {
-	socket.on('msg', function(data) {
-		console.log('received: ' + JSON.stringify(data));
-		io.of('/server').emit('msg', data);
-	});
-});
+
