@@ -5,7 +5,7 @@ var static = require('node-static');
 //
 // Create a node-static server instance to serve the './public' folder
 //
-var file = new(static.Server)('../client');
+var file = new(static.Server)('./client');
 
 var server = require('http').createServer(function (request, response) {
     request.addListener('end', function () {
@@ -16,7 +16,7 @@ var server = require('http').createServer(function (request, response) {
     }).resume();
 });
 
-var io = socketIO.listen(server);
+var io = socketIO.listen(server, {log: false});
 
 server.listen(8080);
 
