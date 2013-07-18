@@ -3,14 +3,41 @@
 	<head>
 	    <meta charset="utf-8">
 	    <title>WebRTC Streaming Media from Files</title>
-   	    <script src="adapter.js"></script>
+   	    <script src="/js/adapter.js"></script>
 		<script src="/socket.io/socket.io.js"></script>
+		<link rel="shortcut icon" type="image/x-icon" href="http://www.tno.nl/favicon_tno.ico"/>
+		<link rel="stylesheet" href="/res/tnortc.css" type="text/css"/>
+		<style>
+			#holder { border: 10px dashed #ccc; width: 300px; height: 300px; margin: 20px auto;}
+			#holder.hover { border: 10px dashed #333; }
+			#holder.background { background-size:100% 100%; background-repeat:no-repeat;}
+		</style>
 	</head>
 
 	<body>
-		<audio controls id="player" autoplay>
-			Your browser does not support the audio element.
-		</audio>
+		<div id="blocktop">
+			<span id="label99"/>
+		</div>
+		<div id="blockbanner-back">
+			<div id="blockbanner"></div>
+		</div>
+		<div id="blockcontent">
+			<article style="align: center;">
+				<h1>Listen to the music</h1>
+
+				<div style="text-align: center;">
+					<h3 id='artist'/>
+					<h3 id='title'/>
+				</div>
+
+				<div style="text-align: center;">
+					<audio controls id="player" autoplay/>
+						Your browser does not support the audio element.
+					</audio>
+				</div>
+			</article>
+
+		</div>
 	</body>
 
     <script lang="javascript">
@@ -26,6 +53,9 @@
 		    while (match = search.exec(query))
 		       urlParams[decode(match[1])] = decode(match[2]);
 		})();
+
+		var title = document.getElementById('title');
+		var artist = document.getElementById('artist');
 
 		if (RTCPeerConnection) {
 		} else {
@@ -49,7 +79,22 @@
 			alert(message);
 		});
 	
-		var pc = new RTCPeerConnection(pc_config);
+		var pc = new RTCPeerConnection(pc_config, { optional: [ { RtpDataChannels: true } ]});
+
+		var dataChannel = pc.createDataChannel('mediaDescription', { reliable: false });
+		dataChannel.onmessage = function (event) {
+			try {
+				var mediaDescription = JSON.parse(event.data);
+				title.innerHTML = mediaDescription.title;
+				artist.innerHTML = mediaDescription.artist;
+			} catch (err) {
+				console.log(err);
+			}
+		}
+
+		function updateMediaDescription() {
+			console.log('media description received');
+		}
 
 		pc.onicecandidate = function(event) {
 			socket.emit('message', { from: myId, to: to, data: { type: 'candidate', candidate: event.candidate } });
