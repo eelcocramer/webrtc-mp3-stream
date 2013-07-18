@@ -18,7 +18,15 @@ var server = require('http').createServer(function (request, response) {
 
 var io = socketIO.listen(server, {log: false});
 
-server.listen(8080);
+io.configure(function() {
+	io.set("transports", ["xhr-polling"]);
+	io.set("polling duration", 10);
+});
+
+var port = process.env.PORT || 8080;
+
+server.listen(port);
+console.log('Listening on port: ' + port);
 
 var sockets = {};
 
