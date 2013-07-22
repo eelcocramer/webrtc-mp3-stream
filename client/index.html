@@ -123,7 +123,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 			console.log('id = ' + id);
 
 			var clientURL = window.location.protocol + '//' + window.location.host + '/listen.html?id=' + myId;
-			room.innerHTML = 'Invite other to listen to your stream by sharing this link:<br/><a href="' + clientURL + '" target="_blank">' + clientURL + '</a>'; 
+			room.innerHTML = 'Invite others to listen to your stream by sharing this link:<br/><a href="' + clientURL + '" target="_blank">' + clientURL + '</a>'; 
 		});
 
 		socket.on('disconnected', function(from) {
