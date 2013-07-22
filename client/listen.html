@@ -150,18 +150,12 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 		});
 
 	    pc.onaddstream = gotRemoteStream;
-	    pc.onremovestream = remoteStreamRemoved; // stop playing when a stream is removed
 
 	    // when a media stream is received attach it to the media element.
     	function gotRemoteStream(event) {
     		console.log('Got remote stream.');
     		attachMediaStream(player, event.stream);
     		player.play();
-    	}
-
-    	function remoteStreamRemoved(event) {
-    		console.log('Remote stream removed.');
-    		player.pause();
     	}
 
    	  	function failed(code) {

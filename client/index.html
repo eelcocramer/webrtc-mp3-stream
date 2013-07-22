@@ -301,6 +301,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
     	function stopStream() {
     		for (var peer in peers) {
     			if (peers[peer].stream) {
+    				peers[peer].stream.stop();
 	    			peers[peer].peerconnection.removeStream(peers[peer].stream);
 	    			peers[peer].stream = undefined;
     			}
