@@ -4,6 +4,9 @@
 , "author": "Eelco Cramer <eelco@servicelab.org>"
 , "keywords" :
   [ "webrtc"
+  , "stream"
+  , "mp3"
+  , "chrome"
   ]
 , "directories" : 
   { "lib" : "./lib"
@@ -15,5 +18,5 @@
   , "node-uuid" : ">= 1.4.x"
   , "node-static" : ">= 0.7.x"
   }
-, "license": "BSD-2-Clause"
+, "license": "BSD-3-Clause"
 }

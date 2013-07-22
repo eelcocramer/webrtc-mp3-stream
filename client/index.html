@@ -1,15 +1,27 @@
+<!--
+Copyright (c) 2013, Eelco Cramer
+All rights reserved.
+
+Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
+
+* Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.
+* Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer in the documentation and/or other materials provided with the distribution.
+* Neither the name of 'The Netherlands Organisation for Applied Scientific Research TNO' nor the names of its contributors may be used to endorse or promote products derived from this software without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+-->
 <!doctype html>
 <html>
 	<head>
 	    <meta charset="utf-8">
 	    <meta name="viewport" content="width=620"/>
 	    <title>WebRTC Demo: Stream your mp3s</title>
-	    <script src="/js/adapter.js"></script>
+	    <script src="js/adapter.js"></script>
 		<script src="/socket.io/socket.io.js"></script>
-		<script src="/js/id3-minimized.js"></script>
+		<script src="js/id3-minimized.js"></script>
 		<script src="https://apis.google.com/js/client.js?onload=load"></script>
 		<link rel="shortcut icon" type="image/x-icon" href="http://www.tno.nl/favicon_tno.ico"/>
-		<link rel="stylesheet" href="/res/tnortc.css" type="text/css"/>
+		<link rel="stylesheet" href="res/tnortc.css" type="text/css"/>
 		<style>
 			#holder { border: 10px dashed #ccc; width: 300px; height: 300px; margin: 20px auto;}
 			#holder.hover { border: 10px dashed #333; }
@@ -18,6 +30,8 @@
 	</head>
 
 	<body>
+		<a href="https://github.com/eelcocramer/webrtc-mp3-stream"><img style="position: absolute; top: 0; left: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_left_red_aa0000.png" alt="Fork me on GitHub"></a>
+
 		<div id="blocktop">
 			<span id="label99"/>
 		</div>
@@ -45,55 +59,70 @@
 				<p>Drag an mp3 to the drop zone above to stream it to your friends without uploading the file to any servers.</p>
 			</article>
 		</div>
+		<div id="blockfooter">
+			© 2012-2013. TNO&nbsp;|&nbsp;
+			<a href="https://github.com/eelcocramer/webrtc-mp3-stream/blob/master/LICENSE.md">License</a>&nbsp;|&nbsp;
+			<a href="https://github.com/aadsm/JavaScript-ID3-Reader">Reading ID3 meta-data by António Afonso et al</a>
+		</div>
 	</body>
 
     <script lang="javascript">
+    	// references to UI elements that need to be updated
     	var holder = document.getElementById('holder');
     	var state = document.getElementById('status');
     	var room = document.getElementById('room');
     	var counter = document.getElementById('counter');
 
 		// Check for the various File API support.
-
 		if (window.File
 			&& window.FileReader 
 			&& window.FileList 
 			&& window.Blob
 			&& RTCPeerConnection
 			&& (window.AudioContext || window.webkitAudioContext)) {
+
 			window.AudioContext = window.AudioContext || window.webkitAudioContext;
-			state.className = 'success';
-			state.innerHTML = 'All the required APIs are available.'
+
+			if (navigator.webkitGetUserMedia) {
+				state.className = 'success';
+				state.innerHTML = 'All the required APIs are available.'
+			} else {
+				state.className = 'fail';
+				state.innerHTML = 'This demo requires Chrome for playing mp3 encoded media.'
+			}
 		} else {
 			state.className = 'fail';
 		}
 
 		// handle file drops
-
 		holder.ondragover = function () { this.className = 'hover'; return false; };
 		holder.ondragend = function () { this.className = ''; return false; };
 		holder.ondrop = handleFileDrop;
 
+		// socket connection to the signalling server
 		var socket = io.connect();
 
+		// setup media objects
 		var context = new AudioContext();
 		var currentStream;
+		var gainNode = context.createGain();
+		var mediaSource, mediaBuffer, remoteDestination, mediaDescription;
+		var muted, start, stop;
+		gainNode.connect(context.destination);
 
+		// webrtc connection configuration
 		var pc_config = {"iceServers": [{"url": "stun:stun.l.google.com:19302"}]};
 
+		// keep track of peers and the id of this session
 		var peers = {};
 		var myId;
 
-		var gainNode = context.createGain();
-		gainNode.connect(context.destination);
-		var mediaSource, mediaBuffer, remoteDestination, mediaDescription;
-		var muted, start, stop;
-
+		// after connecting to the server an ID for this session is received and saved.
 		socket.on('your-id', function(id) {
 			myId = id;
 			console.log('id = ' + id);
 
-			var clientURL = window.location.protocol + '//' + window.location.host + '/client.html?id=' + myId;
+			var clientURL = window.location.protocol + '//' + window.location.host + '/listen.html?id=' + myId;
 			room.innerHTML = 'Invite other to listen to your stream by sharing this link:<br/><a href="' + clientURL + '" target="_blank">' + clientURL + '</a>'; 
 		});
 
@@ -101,6 +130,8 @@
 			peers[from] = undefined;
 		});
 
+		// when a listener logs on to the sessions we'll setup webrtc signalling for the session and check if we can start
+		// streaming media
 		socket.on('logon', function(message) {
 			pc = new RTCPeerConnection(pc_config, { optional: [ { RtpDataChannels: true } ]});
 			
@@ -114,6 +145,7 @@
 			counter.innerHTML = parseInt(counter.innerHTML, 10) + 1;
 		});
 
+		// when a message is received from a listener we'll update the rtc session accordingly
 		socket.on('message', function(message) {
 			console.log('Received message: ' + JSON.stringify(message.data));
 
@@ -126,11 +158,13 @@
 			}
 		});
 
+		// is called when SDP is received from a connected listener
 		function gotDescription(from, desc) {
 			peers[from].peerconnection.setLocalDescription(desc);
 			socket.emit('message', { from: myId, to: from, data: { type: 'sdp', sdp: desc } });
 		}
 
+		// checks if media is present and starts streaming media to a connected listener if possible
 		function startPlayingIfPossible(from) {
 			// add the stream to the peerconnection for this connection
 			if (mediaSource && remoteDestination) {
@@ -158,6 +192,7 @@
 			}
 		}
 
+		// Sends media meta information over a rtc data channel to a connected listener
 		function sendMediaDescription(channel) {
 			if (channel.readyState === 'open') {
 				var data = JSON.stringify(mediaDescription);
@@ -173,7 +208,9 @@
     		log("Failure callback: " + code);
   		}
 
+  		// is called when a file is dropped in the drop zone
     	function handleFileDrop(event) {
+    		// stop the current stream.
     		stopStream();
 
 			this.className = '';
@@ -182,6 +219,7 @@
 			var file = event.dataTransfer.files[0];
 			mediaDescription = {};
 
+			// load the meta-data from the mp3
 			ID3.loadTags(file.name, function() {
 			    var tags = ID3.getAllTags(file.name);
 			    console.log(tags.artist + " - " + tags.title + ", " + tags.album);
@@ -207,8 +245,9 @@
 			if (file.type.match('audio*')) {
 				var reader = new FileReader();
 
+				// read the mp3 and decode the audio.
+
 				reader.onload = (function(readEvent) {
-					// holder.style.background = 'url(' + event.target.result + ') no-repeat center';
 					context.decodeAudioData(readEvent.target.result, function(buffer) {
 						if (mediaSource) {
 							mediaSource.stop(0);
@@ -226,6 +265,7 @@
 			return false;
 		}
 
+		// starts playing a media stream from a given offset.
     	function playStream(offset) {
     		offset = offset ? offset : 0;
 			mediaSource = context.createBufferSource();
@@ -242,6 +282,7 @@
 			}
     	}
 
+    	// stops playing the stream and removes the stream from peer connections
     	function stopStream() {
     		for (var peer in peers) {
     			if (peers[peer].stream) {
@@ -253,12 +294,14 @@
     		if (mediaSource) mediaSource.stop(0);
     	}
 
+    	// sets the volume
     	function changeVolume(element) {
     		var volume = element.value;
     		var fraction = parseInt(element.value, 10) / parseInt(element.max, 10);
     		gainNode.gain.value = fraction * fraction;
     	}
 
+    	// mutes the volume
     	function toggleMute() {
     		if (muted) {
     			gainNode.gain.value = muted;
@@ -269,6 +312,7 @@
     		}
     	}
 
+    	// toggles pause resume
     	function togglePlay() {
     		if (stop) {
     			var offset = stop - start;

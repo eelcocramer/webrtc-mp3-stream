@@ -1,3 +1,15 @@
+<!--
+Copyright (c) 2013, Eelco Cramer
+All rights reserved.
+
+Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
+
+* Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.
+* Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer in the documentation and/or other materials provided with the distribution.
+* Neither the name of 'The Netherlands Organisation for Applied Scientific Research TNO' nor the names of its contributors may be used to endorse or promote products derived from this software without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+-->
 <!doctype html>
 <html>
 	<head>
@@ -41,6 +53,7 @@
 	</body>
 
     <script lang="javascript">
+    	// getting the session id from the request URI
 		var urlParams;
 		(window.onpopstate = function () {
 		    var match,
@@ -54,24 +67,32 @@
 		       urlParams[decode(match[1])] = decode(match[2]);
 		})();
 
+		// UI elements that can be updated
 		var title = document.getElementById('title');
 		var artist = document.getElementById('artist');
+   		var player = document.getElementById('player');
 
+		// check for required APIs
 		if (RTCPeerConnection) {
 		} else {
 			alert('The required APIs are not fully supported in this browser.');
 		}
 
+		// configuration for peer connections
 		var pc_config = {"iceServers": [{"url": "stun:stun.l.google.com:19302"}]};
 
+		// connect to the server
 		var socket = io.connect();
 
+		// references to the id of this listener and the id of the host.
 		var myId;
 		var to = urlParams.id;
 
+		// id of the listener is received from the server
 		socket.on('your-id', function(id) {
 			myId = id;
 			console.log('id = ' + id);
+			// send logon message to the host
 			socket.emit('logon', { from: myId, to: to } );
 		});
 
@@ -79,8 +100,10 @@
 			alert(message);
 		});
 	
+		// creates a peer connection
 		var pc = new RTCPeerConnection(pc_config, { optional: [ { RtpDataChannels: true } ]});
 
+		// creates a data channel to receive meta data 
 		var dataChannel = pc.createDataChannel('mediaDescription', { reliable: false });
 		dataChannel.onmessage = function (event) {
 			try {
@@ -100,6 +123,7 @@
 			socket.emit('message', { from: myId, to: to, data: { type: 'candidate', candidate: event.candidate } });
 		}
 
+		// when a message is received add it to the peerconnection accordingly
 		socket.on('message', function(message) {
 			console.log('Received message: ' + JSON.stringify(message.data));
 			
@@ -118,9 +142,9 @@
 
 	    pc.onaddstream = gotRemoteStream;
 
+	    // when a media stream is received attach it to the media element.
     	function gotRemoteStream(event) {
     		console.log('Got remote stream.');
-    		var player = document.getElementById('player');
     		attachMediaStream(player, event.stream);
     		player.play();
     	}
