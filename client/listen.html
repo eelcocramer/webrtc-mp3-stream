@@ -42,6 +42,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 				<div style="text-align: center;">
 					<h3 id='artist'/>
 					<h3 id='title'/>
+					<h3 id='rate'/>
 				</div>
 
 				<div style="text-align: center;">
@@ -78,6 +79,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 		var title = document.getElementById('title');
 		var artist = document.getElementById('artist');
    		var player = document.getElementById('player');
+   		var rate = document.getElementById('rate');
 
 		// check for required APIs
 		if (RTCPeerConnection) {
@@ -163,6 +165,48 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
     		console.log('Got remote stream.');
     		attachMediaStream(player, event.stream);
     		player.play();
+    		monitorBitrate();
+    	}
+
+    	var timestampPrev = 0;
+    	var bytesPrev;
+    	var monitorInterval;
+
+    	function monitorBitrate() {
+    		if (monitorInterval) {
+	    		timestampPrev = 0;
+    			bytesPrev = 0;
+    			//clearInterval(monitorInterval);
+		    }
+
+    		monitorInterval = setInterval(function() {
+	    		if (pc.getRemoteStreams()[0]) {
+	    			pc.getStats(function(stats) {
+	    				var bitrateTxt = 'No bitrate stats';
+	    				var results = stats.result();
+	    				for (var i in results) {
+	    					var result = results[i];
+	    					if (!result.local || result.local === result) {
+	    						if (result.type === 'ssrc') {
+	    							var bytesNow = result.stat('bytesReceived');
+	    							if (timestampPrev > 0) {
+	    								var bitrate = Math.round((bytesNow - bytesPrev) * 8 / (result.timestamp - timestampPrev));
+
+	    								if (bitrate > 0) {
+	    									var bitrateTxt = 'Received in ' + bitrate + ' kbits/sec';
+	    								}	
+	    							}
+
+	    							timestampPrev = result.timestamp;
+	    							bytesPrev = bytesNow;
+	    						}
+	    					}
+
+							rate.innerHTML = bitrateTxt;
+	    				}
+	    			});
+	    		}
+    		}, 1000);
     	}
 
    	  	function failed(code) {
