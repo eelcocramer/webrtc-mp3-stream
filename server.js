@@ -64,6 +64,7 @@ io.sockets.on('connection', function(socket) {
 	// remove references to the disconnected socket
 	socket.on('disconnect', function() {
 		sockets[socket] = undefined;
+		delete sockets[socket];
 	});
 
 	// when a message is received forward it to the addressee
@@ -79,6 +80,14 @@ io.sockets.on('connection', function(socket) {
 	socket.on('logon', function(message) {
 		if (sockets[message.to]) {
 			sockets[message.to].emit('logon', message);
+		} else {
+			socket.emit('error', 'Does not exsist at server.');
+		}
+	});
+
+	socket.on('logoff', function(message) {
+		if (sockets[message.to]) {
+			sockets[message.to].emit('logoff', message);
 		} else {
 			socket.emit('error', 'Does not exsist at server.');
 		}

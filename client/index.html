@@ -142,7 +142,22 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 			peers[message.from] = { peerconnection: pc, stream: undefined };
 			startPlayingIfPossible(message.from);
 
-			counter.innerHTML = parseInt(counter.innerHTML, 10) + 1;
+			counter.innerHTML = Object.keys(peers).length;
+		});
+
+		// when a listener leaves remove the rtc stream for that peer
+		socket.on('logoff', function(message) {
+			console.log('received logoff message');
+			
+			try {
+				peers[message.from].peerconnection.removeStream(peers[message.from].stream);
+			} catch (err) {
+
+			}
+
+	    	peers[message.from].stream = undefined;
+	    	delete peers[message.from];
+			counter.innerHTML = Object.keys(peers).length;
 		});
 
 		// when a message is received from a listener we'll update the rtc session accordingly
