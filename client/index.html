@@ -248,8 +248,10 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 			    if ('picture' in tags) {
 			    	var image = tags.picture;
 
-			    	// mediaDescription.image = {};
-			    	// mediaDescription.image.format = image.format;
+			    	mediaDescription.image = {};
+			    	mediaDescription.image.format = image.format;
+			    	mediaDescription.image.size = image.data.length;
+
 			    	// mediaDescription.image.base64 = Base64.encodeBytes(image.data);
 
 			    	holder.style.background = 'url("data:' + image.format + ';base64,' + Base64.encodeBytes(image.data) + '") no-repeat center';
