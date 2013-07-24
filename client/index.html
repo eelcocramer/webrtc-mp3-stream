@@ -42,9 +42,10 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 			<article style="align: center;">
 				<h1>Stream mp3s directly from your browser</h1>
 
-				<div id="holder"></div> 
+				<div id="holder"></div>
 
 				<div style="text-align: center">
+					<p><label id="meta">&nbsp;</label></p>
 					<input type="button" onclick="toggleMute();" value="Mute/Unmute" class="button"/>
 					<input type="button" onclick="togglePlay();" value="Pause/Play" class="button"/>
 					<br/>
@@ -73,6 +74,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
     	var state = document.getElementById('status');
     	var room = document.getElementById('room');
     	var counter = document.getElementById('counter');
+    	var meta = document.getElementById('meta');
 
 		// Check for the various File API support.
 		if (window.File
@@ -239,6 +241,9 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 
 			// load the meta-data from the mp3
 			ID3.loadTags(file.name, function() {
+				mediaDescription.artist = 'Unknown';
+			    mediaDescription.title = 'Untitled';
+
 			    var tags = ID3.getAllTags(file.name);
 			    console.log(tags.artist + " - " + tags.title + ", " + tags.album);
 
@@ -255,8 +260,13 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 			    	// mediaDescription.image.base64 = Base64.encodeBytes(image.data);
 
 			    	holder.style.background = 'url("data:' + image.format + ';base64,' + Base64.encodeBytes(image.data) + '") no-repeat center';
-			    	holder.style.backgroundSize = "295px 295px";
+			    } else {
+			    	holder.style.background = 'url("res/no-artwork.png")';
 			    }
+
+		    	holder.style.backgroundSize = "295px 295px";
+
+		    	meta.innerHTML = 'Playing ' + mediaDescription.title + ' by ' + mediaDescription.artist;
 			}, { 
 				tags: ["artist", "title", "album", "year", "comment", "track", "genre", "lyrics", "picture"],
 				dataReader: new FileAPIReader(file)

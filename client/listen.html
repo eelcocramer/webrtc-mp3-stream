@@ -42,9 +42,8 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 				<h1>Listen to the music</h1>
 
 				<div style="text-align: center;">
-					<h3 id='artist'/>
-					<h3 id='title'/>
-					<h3 id='rate'/>
+					<h3 id='meta'>&nbsp;</h3>
+					<h3 id='rate'>&nbsp;</h3>
 				</div>
 
 				<div style="text-align: center;">
@@ -90,8 +89,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 		}
 
 		// UI elements that can be updated
-		var title = document.getElementById('title');
-		var artist = document.getElementById('artist');
+		var meta = document.getElementById('meta');
    		var player = document.getElementById('player');
    		var rate = document.getElementById('rate');
 
@@ -140,8 +138,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 		dataChannel.onmessage = function (event) {
 			try {
 				var mediaDescription = JSON.parse(event.data);
-				title.innerHTML = mediaDescription.title;
-				artist.innerHTML = mediaDescription.artist;
+		    	meta.innerHTML = 'Listening to ' + mediaDescription.title + ' by ' + mediaDescription.artist;
 			} catch (err) {
 				console.log(err);
 			}
