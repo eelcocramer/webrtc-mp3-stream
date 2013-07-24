@@ -6,6 +6,10 @@ The code in this repository demonstrates how mp3s can be streamed between web br
 
 A live demonstration is available at [servicelab.org](http://webrtc.servicelab.org).
 
+## REQUIREMENTS
+
+To run the demo you need to have [node.js](http://nodejs.org/) installed.
+
 ## RUNNING THE DEMO
 
 Install and run this demo by:
