@@ -17,7 +17,7 @@ Install and run this demo by:
 1. Cloning the repository: `git clone https://github.com/eelcocramer/webrtc-mp3-stream.git`
 2. Installing the dependencies: `npm install`
 3. Running the server: `node server.js`
-4. Open the demo in the browser: http://localhost:8080/index.html
+4. Opening the demo in the browser: [http://localhost:8080/index.html](http://localhost:8080/index.html)
 
 ## LICENSE
 
