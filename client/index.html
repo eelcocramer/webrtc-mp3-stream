@@ -195,20 +195,20 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 				}, failed);
 
 				// send the mediaDescription via a datachannel if present
-				if (mediaDescription) {
-					if (!peers[from].dataChannel) {
-						peers[from].dataChannel = peers[from].peerconnection.createDataChannel('mediaDescription', { reliable: false });
-						peers[from].dataChannel.onopen = onDataChannelOpen;
-						peers[from].peerconnection.createOffer(function(desc) {
-							gotDescription(from, desc)
-						}, failed);
-					} else {
-						if (peers[from].dataChannel.readyState === 'open') {
-							sendMediaDescription(peers[from].dataChannel);
-						}
-					}
+				// if (mediaDescription) {
+				// 	if (!peers[from].dataChannel) {
+				// 		peers[from].dataChannel = peers[from].peerconnection.createDataChannel('mediaDescription', { reliable: true });
+				// 		peers[from].dataChannel.onopen = onDataChannelOpen;
+				// 		peers[from].peerconnection.createOffer(function(desc) {
+				// 			gotDescription(from, desc)
+				// 		}, failed);
+				// 	} else {
+				// 		if (peers[from].dataChannel.readyState === 'open') {
+				// 			sendMediaDescription(peers[from].dataChannel);
+				// 		}
+				// 	}
 
-				}
+				// }
 			}
 		}
 

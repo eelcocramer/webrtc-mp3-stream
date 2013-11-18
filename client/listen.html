@@ -88,6 +88,10 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 			alert('This page needs Google Chrome to play correctly.');
 		}
 
+		window.AudioContext = window.AudioContext || window.webkitAudioContext;
+
+		var context = new AudioContext();
+
 		// UI elements that can be updated
 		var meta = document.getElementById('meta');
    		var player = document.getElementById('player');
@@ -167,8 +171,8 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 					pc.createAnswer(function(desc) {
 						pc.setLocalDescription(desc);
 						socket.emit('message', { from: myId, to: message.from, data: { type: 'sdp', sdp: desc} } );
-					}, failed);
-				}, failed);
+					}, failedCreateAnswer);
+				}, failedSetRemoteDescription);
 			}
 		});
 
@@ -223,8 +227,12 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
     		}, 1000);
     	}
 
-   	  	function failed(error) {
-	    	console.log("Failure callback: " + JSON.stringify(error));
+   	  	function failedCreateAnswer(error) {
+	    	console.log("Failure callback from createAnswer: " + JSON.stringify(error));
+  		}
+
+   	  	function failedSetRemoteDescription(error) {
+	    	console.log("Failure callback from setRemoteDescription: " + JSON.stringify(error));
   		}
 
     </script>
