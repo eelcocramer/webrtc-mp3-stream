@@ -142,8 +142,18 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 				socket.emit('message', { from: myId, to: message.from, data: { type: 'candidate', candidate: event.candidate } } );
 			}
 
-			peers[message.from] = { peerconnection: pc, stream: undefined };
-			startPlayingIfPossible(message.from);
+			var from = message.from;
+			peers[from] = { peerconnection: pc, stream: undefined };
+
+			// create a data channel for sending the media description
+			peers[from].dataChannel = peers[from].peerconnection.createDataChannel('mediaDescription', { reliable: true });
+			peers[from].dataChannel.onopen = function() {
+				startPlayingIfPossible(from);
+			};
+
+			peers[from].peerconnection.createOffer(function(desc) {
+				gotDescription(from, desc);
+			}, failed);
 
 			counter.innerHTML = Object.keys(peers).length;
 		});
@@ -191,30 +201,16 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 				peers[from].peerconnection.addStream(remoteDestination.stream, constraints);
 				peers[from].stream = remoteDestination.stream;
 				peers[from].peerconnection.createOffer(function(desc) {
-					gotDescription(from, desc)
+					gotDescription(from, desc);
 				}, failed);
 
-				// send the mediaDescription via a datachannel if present
-				// if (mediaDescription) {
-				// 	if (!peers[from].dataChannel) {
-				// 		peers[from].dataChannel = peers[from].peerconnection.createDataChannel('mediaDescription', { reliable: true });
-				// 		peers[from].dataChannel.onopen = onDataChannelOpen;
-				// 		peers[from].peerconnection.createOffer(function(desc) {
-				// 			gotDescription(from, desc)
-				// 		}, failed);
-				// 	} else {
-				// 		if (peers[from].dataChannel.readyState === 'open') {
-				// 			sendMediaDescription(peers[from].dataChannel);
-				// 		}
-				// 	}
-
-				// }
+				sendMediaDescription(peers[from].dataChannel);
 			}
 		}
 
 		// Sends media meta information over a rtc data channel to a connected listener
 		function sendMediaDescription(channel) {
-			if (channel.readyState === 'open') {
+			if (mediaDescription && channel.readyState === 'open') {
 				var data = JSON.stringify(mediaDescription);
 				channel.send(data);
 			}
