@@ -14,6 +14,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 var socketIO = require('socket.io');
 var uuid = require('node-uuid');
 var static = require('node-static');
+var os = require('os');
 
 //
 // Create a node-static server instance to serve the './public' folder
@@ -35,10 +36,12 @@ var server = require('http').createServer(function (request, response) {
 var io = socketIO.listen(server, {log: false});
 
 // configuration needed for Heroku hosting
-io.configure(function() {
-	io.set("transports", ["xhr-polling"]);
-	io.set("polling duration", 10);
-});
+if (os.platform() !== 'win32') {
+    io.configure(function() {
+        io.set("transports", ["xhr-polling"]);
+        io.set("polling duration", 10);
+    });
+}
 
 var port = process.env.PORT || 8080;
 
