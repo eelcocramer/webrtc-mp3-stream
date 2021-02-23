@@ -4,7 +4,7 @@ The code in this repository demonstrates how mp3s can be streamed between web br
 
 ## DEMO
 
-A live demonstration is available at [servicelab.org](http://webrtc.servicelab.org).
+A live demonstration is available at [heroku](https://webrtc-mp3-stream.herokuapp.com).
 
 ## REQUIREMENTS
 
