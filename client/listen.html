@@ -12,250 +12,303 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 -->
 <!doctype html>
 <html>
-	<head>
-	    <meta charset="utf-8">
-	    <title>WebRTC Streaming Media from Files</title>
-   	    <script src="/js/adapter.js"></script>
-		<script src="/socket.io/socket.io.js"></script>
-		<link rel="shortcut icon" type="image/x-icon" href="http://www.tno.nl/favicon_tno.ico"/>
-		<link rel="stylesheet" href="/res/tnortc.css" type="text/css"/>
-		<style>
-			#holder { border: 10px dashed #ccc; width: 300px; height: 300px; margin: 20px auto;}
-			#holder.hover { border: 10px dashed #333; }
-			#holder.background { background-size:100% 100%; background-repeat:no-repeat;}
-		</style>
-	</head>
 
-	<body>
-		<a href="https://github.com/eelcocramer/webrtc-mp3-stream"><img style="position: absolute; top: 0; left: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_left_red_aa0000.png" alt="Fork me on GitHub"></a>
+<head>
+    <meta charset="utf-8">
+    <title>WebRTC Streaming Media from Files</title>
+    <script src="/js/adapter.js"></script>
+    <script src="/socket.io/socket.io.js"></script>
+    <link rel="shortcut icon" type="image/x-icon" href="http://www.tno.nl/favicon_tno.ico" />
+    <link rel="stylesheet" href="/res/tnortc.css" type="text/css" />
+    <style>
+        #holder {
+            border: 10px dashed #ccc;
+            width: 300px;
+            height: 300px;
+            margin: 20px auto;
+        }
 
-		<div id="blocktop">
-			<span id="label99"/>
-		</div>
+        #holder.hover {
+            border: 10px dashed #333;
+        }
 
-		<div id="blockbanner-back">
-			<div id="blockbanner"></div>
-		</div>
+        #holder.background {
+            background-size: 100% 100%;
+            background-repeat: no-repeat;
+        }
+    </style>
+</head>
 
-		<div id="blockcontent">
-			<article style="align: center;">
-				<h1>Listen to the music</h1>
+<body>
+    <a href="https://github.com/eelcocramer/webrtc-mp3-stream"><img style="position: absolute; top: 0; left: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_left_red_aa0000.png" alt="Fork me on GitHub"></a>
 
-				<div style="text-align: center;">
-					<h3 id='meta'>&nbsp;</h3>
-					<h3 id='rate'>&nbsp;</h3>
-				</div>
+    <div id="blocktop">
+        <span id="label99" />
+    </div>
 
-				<div style="text-align: center;">
-					<audio controls id="player" autoplay/>
-						Your browser does not support the audio element.
-					</audio>
-				</div>
+    <div id="blockbanner-back">
+        <div id="blockbanner"></div>
+    </div>
 
-				<h1>Or...</h1>
+    <div id="blockcontent">
+        <article style="align: center;">
+            <h1>Listen to the music</h1>
 
-				<div style="text-align: center">
-					<input type="button" onclick="window.location.href='/';" value="Start your own stream!" class="button"/>
-				</div>
+            <div style="text-align: center;">
+                <h3 id='meta'>&nbsp;</h3>
+                <h3 id='rate'>&nbsp;</h3>
+            </div>
 
-			</article>
+            <div style="text-align: center;">
+                <audio controls id="player" />
+                Your browser does not support the audio element.
+                </audio>
+            </div>
 
-		</div>
+            <h1>Or...</h1>
 
-		<div id="blockfooter">
-			© 2013. TNO&nbsp;|&nbsp;
-			<a href="http://servicelab.org/2013/07/24/streaming-audio-between-browsers-with-webrtc-and-webaudio/">Blog</a>&nbsp;|&nbsp;
-			<a href="https://github.com/eelcocramer/webrtc-mp3-stream/blob/master/LICENSE.md">License</a>
-		</div>
-	</body>
+            <div style="text-align: center">
+                <input type="button" onclick="window.location.href='/';" value="Start your own stream!" class="button" />
+            </div>
 
-    <script lang="javascript">
-    	// getting the session id from the request URI
-		var urlParams;
-		(window.onpopstate = function () {
-		    var match,
-		        pl     = /\+/g,  // Regex for replacing addition symbol with a space
-		        search = /([^&=]+)=?([^&]*)/g,
-		        decode = function (s) { return decodeURIComponent(s.replace(pl, " ")); },
-		        query  = window.location.search.substring(1);
+        </article>
 
-		    urlParams = {};
-		    while (match = search.exec(query))
-		       urlParams[decode(match[1])] = decode(match[2]);
-		})();
+    </div>
 
-		if (!window.chrome) {
-			alert('This page needs Google Chrome to play correctly.');
-		}
+    <div id="blockfooter">
+        © 2013. TNO&nbsp;|&nbsp;
+        <a href="http://servicelab.org/2013/07/24/streaming-audio-between-browsers-with-webrtc-and-webaudio/">Blog</a>&nbsp;|&nbsp;
+        <a href="https://github.com/eelcocramer/webrtc-mp3-stream/blob/master/LICENSE.md">License</a>
+    </div>
+</body>
 
-		window.AudioContext = window.AudioContext || window.webkitAudioContext;
+<script lang="javascript">
+    // getting the session id from the request URI
+    var urlParams;
+    (window.onpopstate = function() {
+        var match,
+            pl = /\+/g, // Regex for replacing addition symbol with a space
+            search = /([^&=]+)=?([^&]*)/g,
+            decode = function(s) {
+                return decodeURIComponent(s.replace(pl, " "));
+            },
+            query = window.location.search.substring(1);
 
-		var context = new AudioContext();
+        urlParams = {};
+        while (match = search.exec(query))
+            urlParams[decode(match[1])] = decode(match[2]);
+    })();
 
-		// UI elements that can be updated
-		var meta = document.getElementById('meta');
-   		var player = document.getElementById('player');
-   		var rate = document.getElementById('rate');
+    if (!window.chrome) {
+        alert('This page needs Google Chrome to play correctly.');
+    }
 
-		// check for required APIs
-		if (RTCPeerConnection) {
-		} else {
-			alert('The required APIs are not fully supported in this browser.');
-		}
+    window.AudioContext = window.AudioContext || window.webkitAudioContext;
 
-		// configuration for peer connections
-		var pc_config = {"iceServers": [{"url": "stun:stun.l.google.com:19302"}]};
+    var context = new AudioContext();
 
-		// connect to the server
-		var socket = io.connect();
+    // UI elements that can be updated
+    var meta = document.getElementById('meta');
+    var player = document.getElementById('player');
+    var rate = document.getElementById('rate');
 
-		// references to the id of this listener and the id of the host.
-		var myId;
-		var to = urlParams.id;
+    // check for required APIs
+    if (RTCPeerConnection) {} else {
+        alert('The required APIs are not fully supported in this browser.');
+    }
 
-		// id of the listener is received from the server
-		socket.on('your-id', function(id) {
-			myId = id;
-			console.log('id = ' + id);
-			// send logon message to the host
-			socket.emit('logon', { from: myId, to: to } );
-		});
+    // configuration for peer connections
+    var pc_config = {
+        "iceServers": [{
+            "url": "stun:stun.l.google.com:19302"
+        }]
+    };
 
-		socket.on('error', function(message) {
-			alert(message);
-		});
+    // connect to the server
+    var socket = io.connect();
 
-		window.onbeforeunload = function(e) {
-			player.pause();
-			socket.emit('logoff', { from: myId, to: to } );
-			for (var i=0;i<1000;i++){
-	    		// do something unnoticable but time consuming like writing a lot to console
-  				console.log('buying some time to finish sending data'); 
-			};
-		};
-	
-		// creates a peer connection
-		var pc = new RTCPeerConnection(pc_config, { optional: [ { RtpDataChannels: true } ]});
+    // references to the id of this listener and the id of the host.
+    var myId;
+    var to = urlParams.id;
 
-		// creates a data channel to receive meta data 
-		var dataChannel = pc.createDataChannel('mediaDescription', { reliable: false });
-		dataChannel.onmessage = function (event) {
-			try {
-				var mediaDescription = JSON.parse(event.data);
-		    	meta.innerHTML = 'Listening to ' + mediaDescription.title + ' by ' + mediaDescription.artist;
-			} catch (err) {
-				console.log(err);
-			}
-		}
+    // id of the listener is received from the server
+    socket.on('your-id', function(id) {
+        myId = id;
+        console.log('id = ' + id);
+        // send logon message to the host
+        socket.emit('logon', {
+            from: myId,
+            to: to
+        });
+    });
 
-		function updateMediaDescription() {
-			console.log('media description received');
-		}
+    socket.on('error', function(message) {
+        alert(message);
+    });
 
-		pc.onicecandidate = function(event) {
-			socket.emit('message', { from: myId, to: to, data: { type: 'candidate', candidate: event.candidate } });
-		}
+    window.onbeforeunload = function(e) {
+        player.pause();
+        socket.emit('logoff', {
+            from: myId,
+            to: to
+        });
+        for (var i = 0; i < 1000; i++) {
+            // do something unnoticable but time consuming like writing a lot to console
+            console.log('buying some time to finish sending data');
+        };
+    };
 
-		// when a message is received add it to the peerconnection accordingly
-		socket.on('message', function(message) {
-			console.log('Received message: ' + JSON.stringify(message.data));
-			
-			if (message.data.type === 'candidate') {
-				if (message.data.candidate) {
-					console.log('adding an ice candidate');
-					pc.addIceCandidate(new RTCIceCandidate(message.data.candidate));
-				}
-			} else if (message.data.type === 'sdp') {
-				console.log('setting remote description and creating answer.')
-				pc.setRemoteDescription(new RTCSessionDescription(message.data.sdp), function() {
-					pc.createAnswer(function(desc) {
-						pc.setLocalDescription(desc);
-						socket.emit('message', { from: myId, to: message.from, data: { type: 'sdp', sdp: desc} } );
-					}, failedCreateAnswer);
-				}, failedSetRemoteDescription);
-			}
-		});
+    // creates a peer connection
+    var pc = new RTCPeerConnection(pc_config, {
+        optional: [{
+            RtpDataChannels: true
+        }]
+    });
 
-	    pc.onaddstream = gotRemoteStream;
+    // creates a data channel to receive meta data 
+    var dataChannel = pc.createDataChannel('mediaDescription', {
+        reliable: false
+    });
+    dataChannel.onmessage = function(event) {
+        try {
+            var mediaDescription = JSON.parse(event.data);
+            meta.innerHTML = 'Listening to ' + mediaDescription.title + ' by ' + mediaDescription.artist;
+        } catch (err) {
+            console.log(err);
+        }
+    }
 
-	    // when a media stream is received attach it to the media element.
-    	function gotRemoteStream(event) {
-    		console.log('Got remote stream.');
-    		attachMediaStream(player, event.stream);
-    		player.play();
-    		monitorBitrate();
-    		player.onloadeddata = function (event) {
-    			console.log(event);
-    		}
+    function updateMediaDescription() {
+        console.log('media description received');
+    }
 
-    		player.onprogress = function (event) {
-    			console.log(event);
-    		}
-    	}
+    pc.onicecandidate = function(event) {
+        socket.emit('message', {
+            from: myId,
+            to: to,
+            data: {
+                type: 'candidate',
+                candidate: event.candidate
+            }
+        });
+    }
 
-    	var timestampPrev = 0;
-    	var bytesPrev;
-    	var monitorInterval;
+    // when a message is received add it to the peerconnection accordingly
+    socket.on('message', function(message) {
+        console.log('Received message: ' + JSON.stringify(message.data));
 
-    	function monitorBitrate() {
-    		if (monitorInterval) {
-	    		timestampPrev = 0;
-    			bytesPrev = 0;
-    			//clearInterval(monitorInterval);
-		    }
+        if (message.data.type === 'candidate') {
+            if (message.data.candidate) {
+                console.log('adding an ice candidate');
+                pc.addIceCandidate(new RTCIceCandidate(message.data.candidate));
+            }
+        } else if (message.data.type === 'sdp') {
+            console.log('setting remote description and creating answer.')
+            pc.setRemoteDescription(new RTCSessionDescription(message.data.sdp), function() {
+                pc.createAnswer(function(desc) {
+                    pc.setLocalDescription(desc);
+                    socket.emit('message', {
+                        from: myId,
+                        to: message.from,
+                        data: {
+                            type: 'sdp',
+                            sdp: desc
+                        }
+                    });
+                }, failedCreateAnswer);
+            }, failedSetRemoteDescription);
+        }
+    });
 
-    		monitorInterval = setInterval(function() {
-	    		if (pc.getRemoteStreams()[0]) {
-	    			pc.getStats(function(stats) {
-	    				var bitrateTxt = 'No bitrate stats';
-	    				var results = stats.result();
-	    				for (var i in results) {
-	    					var result = results[i];
-	    					if (!result.local || result.local === result) {
-	    						if (result.type === 'ssrc') {
-	    							var bytesNow = result.stat('bytesReceived');
-	    							if (timestampPrev > 0) {
-	    								var bitrate = Math.round((bytesNow - bytesPrev) * 8 / (result.timestamp - timestampPrev));
+    pc.onaddstream = gotRemoteStream;
 
-	    								if (bitrate > 0) {
-	    									var bitrateTxt = 'Received in ' + bitrate + ' kbits/sec';
-	    								}	
-	    							}
+    // when a media stream is received attach it to the media element.
+    function gotRemoteStream(event) {
+        console.log('Got remote stream.');
+        attachMediaStream(player, event.stream);
+        player.play();
+        monitorBitrate();
+        player.onloadeddata = function(event) {
+            console.log(event);
+        }
 
-	    							timestampPrev = result.timestamp;
-	    							bytesPrev = bytesNow;
-	    						}
-	    					}
+        player.onprogress = function(event) {
+            console.log(event);
+        }
+    }
 
-							rate.innerHTML = bitrateTxt;
-	    				}
-	    			});
-	    		}
-    		}, 1000);
-    	}
+    var timestampPrev = 0;
+    var bytesPrev;
+    var monitorInterval;
 
-   	  	function failedCreateAnswer(error) {
-	    	console.log("Failure callback from createAnswer: " + JSON.stringify(error));
-  		}
+    function monitorBitrate() {
+        if (monitorInterval) {
+            timestampPrev = 0;
+            bytesPrev = 0;
+            //clearInterval(monitorInterval);
+        }
 
-   	  	function failedSetRemoteDescription(error) {
-	    	console.log("Failure callback from setRemoteDescription: " + JSON.stringify(error));
-  		}
+        monitorInterval = setInterval(function() {
+            if (pc.getRemoteStreams()[0]) {
+                pc.getStats(function(stats) {
+                    var bitrateTxt = 'No bitrate stats';
+                    var results = stats.result();
+                    for (var i in results) {
+                        var result = results[i];
+                        if (!result.local || result.local === result) {
+                            if (result.type === 'ssrc') {
+                                var bytesNow = result.stat('bytesReceived');
+                                if (timestampPrev > 0) {
+                                    var bitrate = Math.round((bytesNow - bytesPrev) * 8 / (result.timestamp - timestampPrev));
 
-    </script>
+                                    if (bitrate > 0) {
+                                        var bitrateTxt = 'Received in ' + bitrate + ' kbits/sec';
+                                    }
+                                }
 
-	<script>
-		// only start analytics from the following domains
-	    if (location.host === 'webrtc.servicelab.org' || location.host === 'webrtc-mp3-stream.herokuapp.com') { 
-			(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
-			(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
-			m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
-			})(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+                                timestampPrev = result.timestamp;
+                                bytesPrev = bytesNow;
+                            }
+                        }
 
-			ga('create', 'UA-42632722-1', 'servicelab.org');
-			ga('send', 'pageview');
-	    } else {
-		    ga = function(param) { console.log('ga called with params ' + JSON.stringify(arguments))}
-	    }
-	</script>
+                        rate.innerHTML = bitrateTxt;
+                    }
+                });
+            }
+        }, 1000);
+    }
+
+    function failedCreateAnswer(error) {
+        console.log("Failure callback from createAnswer: " + JSON.stringify(error));
+    }
+
+    function failedSetRemoteDescription(error) {
+        console.log("Failure callback from setRemoteDescription: " + JSON.stringify(error));
+    }
+</script>
+
+<script>
+    // only start analytics from the following domains
+    if (location.host === 'webrtc.servicelab.org' || location.host === 'webrtc-mp3-stream.herokuapp.com') {
+        (function(i, s, o, g, r, a, m) {
+            i['GoogleAnalyticsObject'] = r;
+            i[r] = i[r] || function() {
+                (i[r].q = i[r].q || []).push(arguments)
+            }, i[r].l = 1 * new Date();
+            a = s.createElement(o),
+                m = s.getElementsByTagName(o)[0];
+            a.async = 1;
+            a.src = g;
+            m.parentNode.insertBefore(a, m)
+        })(window, document, 'script', '//www.google-analytics.com/analytics.js', 'ga');
+
+        ga('create', 'UA-42632722-1', 'servicelab.org');
+        ga('send', 'pageview');
+    } else {
+        ga = function(param) {
+            console.log('ga called with params ' + JSON.stringify(arguments))
+        }
+    }
+</script>
+
 </html>

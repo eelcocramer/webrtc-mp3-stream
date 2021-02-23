@@ -20,7 +20,7 @@
   "dependencies": {
     "node-static": "^0.7.11",
     "node-uuid": "^1.4.8",
-    "socket.io": "0.9.16"
+    "socket.io": "^3.1.1"
   },
   "license": "BSD-3-Clause"
 }
