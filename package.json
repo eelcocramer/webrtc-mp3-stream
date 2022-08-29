@@ -13,6 +13,7 @@
         "lib": "./lib"
     },
     "main": "./server.js",
+    "scripts": { "start": "node server.js" }
     "os": [
         "darwin",
         "linux"
