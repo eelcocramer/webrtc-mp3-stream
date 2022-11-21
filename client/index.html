@@ -18,7 +18,6 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
     <meta name="viewport" content="width=620" />
     <title>WebRTC Demo: Stream your mp3s</title>
     <script src="js/adapter.js"></script>
-    <script src="/socket.io/socket.io.js"></script>
     <script src="js/id3-minimized.js"></script>
     <link rel="shortcut icon" type="image/x-icon" href="http://www.tno.nl/favicon_tno.ico" />
     <link rel="stylesheet" href="res/tnortc.css" type="text/css" />
@@ -80,7 +79,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
     </div>
 </body>
 
-<script lang="javascript">
+<script type="module">
     // references to UI elements that need to be updated
     var holder = document.getElementById('holder');
     var state = document.getElementById('status');
@@ -93,7 +92,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
         window.FileReader &&
         window.FileList &&
         window.Blob &&
-        RTCPeerConnection &&
+        webkitRTCPeerConnection &&
         (window.AudioContext || window.webkitAudioContext)) {
 
         window.AudioContext = window.AudioContext || window.webkitAudioContext;
@@ -121,7 +120,8 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
     holder.ondrop = handleFileDrop;
 
     // socket connection to the signalling server
-    var socket = io.connect();
+    import { io } from "https://cdn.socket.io/4.4.1/socket.io.esm.min.js";
+    const socket = io()
 
     // setup media objects
     var context = new AudioContext();
@@ -158,7 +158,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
     // when a listener logs on to the sessions we'll setup webrtc signalling for the session and check if we can start
     // streaming media
     socket.on('logon', function(message) {
-        pc = new RTCPeerConnection(pc_config, {
+        var pc = new webkitRTCPeerConnection(pc_config, {
             optional: [{
                 RtpDataChannels: true
             }]
@@ -356,6 +356,8 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
         }
     }
 
+    window.playStream = playStream;
+
     // stops playing the stream and removes the stream from peer connections
     function stopStream() {
         for (var peer in peers) {
@@ -369,12 +371,16 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
         if (mediaSource) mediaSource.stop(0);
     }
 
+    window.stopStream = stopStream;
+
     // sets the volume
     function changeVolume(element) {
         var volume = element.value;
         var fraction = parseInt(element.value, 10) / parseInt(element.max, 10);
         gainNode.gain.value = fraction * fraction;
     }
+
+    window.changeVolume = changeVolume;
 
     // mutes the volume
     function toggleMute() {
@@ -386,6 +392,8 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
             gainNode.gain.value = 0;
         }
     }
+
+    window.toggleMute = toggleMute;
 
     // toggles pause resume
     function togglePlay() {
@@ -399,6 +407,8 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
             stop = Date.now();
         }
     }
+
+    window.togglePlay = togglePlay;
 </script>
 
 </html>

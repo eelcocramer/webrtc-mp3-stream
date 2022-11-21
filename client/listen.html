@@ -17,7 +17,6 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
     <meta charset="utf-8">
     <title>WebRTC Streaming Media from Files</title>
     <script src="/js/adapter.js"></script>
-    <script src="/socket.io/socket.io.js"></script>
     <link rel="shortcut icon" type="image/x-icon" href="http://www.tno.nl/favicon_tno.ico" />
     <link rel="stylesheet" href="/res/tnortc.css" type="text/css" />
     <style>
@@ -53,6 +52,9 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
     <div id="blockcontent">
         <article style="align: center;">
             <h1>Listen to the music</h1>
+            <div style="text-align: center">
+                <input type="button" onclick="connect()" value="connect!" class="button" />
+            </div>
 
             <div style="text-align: center;">
                 <h3 id='meta'>&nbsp;</h3>
@@ -60,7 +62,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
             </div>
 
             <div style="text-align: center;">
-                <audio controls id="player" autoplay />
+                <audio controls id="player" autoplay/>
                 Your browser does not support the audio element.
                 </audio>
             </div>
@@ -82,7 +84,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
     </div>
 </body>
 
-<script lang="javascript">
+<script type="module">
     // getting the session id from the request URI
     var urlParams;
     (window.onpopstate = function() {
@@ -105,7 +107,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 
     window.AudioContext = window.AudioContext || window.webkitAudioContext;
 
-    var context = new AudioContext();
+    var context = undefined;
 
     // UI elements that can be updated
     var meta = document.getElementById('meta');
@@ -113,7 +115,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
     var rate = document.getElementById('rate');
 
     // check for required APIs
-    if (RTCPeerConnection) {} else {
+    if (webkitRTCPeerConnection) {} else {
         alert('The required APIs are not fully supported in this browser.');
     }
 
@@ -124,26 +126,61 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
         }]
     };
 
-    // connect to the server
-    var socket = io.connect();
 
     // references to the id of this listener and the id of the host.
     var myId;
+    var session = document.getElementById("session")
     var to = urlParams.id;
+    // connect to the server
+    import { io } from "https://cdn.socket.io/4.4.1/socket.io.esm.min.js";
+    var socket = io();
 
     // id of the listener is received from the server
     socket.on('your-id', function(id) {
         myId = id;
         console.log('id = ' + id);
+    });
+
+    socket.on('error', function(message) {
+        alert(message);
+    });
+
+    window.connect = function() {
+        console.log("connecting...");
+        context = new AudioContext();
+
         // send logon message to the host
         socket.emit('logon', {
             from: myId,
             to: to
         });
-    });
+    }
 
-    socket.on('error', function(message) {
-        alert(message);
+    // when a message is received add it to the peerconnection accordingly
+    socket.on('message', function(message) {
+        console.log('Received message: ' + JSON.stringify(message.data));
+
+        if (message.data.type === 'candidate') {
+            if (message.data.candidate) {
+                console.log('adding an ice candidate');
+                pc.addIceCandidate(new RTCIceCandidate(message.data.candidate));
+            }
+        } else if (message.data.type === 'sdp') {
+            console.log('setting remote description and creating answer.')
+            pc.setRemoteDescription(new RTCSessionDescription(message.data.sdp), function() {
+                pc.createAnswer(function(desc) {
+                    pc.setLocalDescription(desc);
+                    socket.emit('message', {
+                        from: myId,
+                        to: message.from,
+                        data: {
+                            type: 'sdp',
+                            sdp: desc
+                        }
+                    });
+                }, failedCreateAnswer);
+            }, failedSetRemoteDescription);
+        }
     });
 
     window.onbeforeunload = function(e) {
@@ -159,7 +196,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
     };
 
     // creates a peer connection
-    var pc = new RTCPeerConnection(pc_config, {
+    var pc = new webkitRTCPeerConnection(pc_config, {
         optional: [{
             RtpDataChannels: true
         }]
@@ -193,32 +230,6 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
         });
     }
 
-    // when a message is received add it to the peerconnection accordingly
-    socket.on('message', function(message) {
-        console.log('Received message: ' + JSON.stringify(message.data));
-
-        if (message.data.type === 'candidate') {
-            if (message.data.candidate) {
-                console.log('adding an ice candidate');
-                pc.addIceCandidate(new RTCIceCandidate(message.data.candidate));
-            }
-        } else if (message.data.type === 'sdp') {
-            console.log('setting remote description and creating answer.')
-            pc.setRemoteDescription(new RTCSessionDescription(message.data.sdp), function() {
-                pc.createAnswer(function(desc) {
-                    pc.setLocalDescription(desc);
-                    socket.emit('message', {
-                        from: myId,
-                        to: message.from,
-                        data: {
-                            type: 'sdp',
-                            sdp: desc
-                        }
-                    });
-                }, failedCreateAnswer);
-            }, failedSetRemoteDescription);
-        }
-    });
 
     pc.onaddstream = gotRemoteStream;
 

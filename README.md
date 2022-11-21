@@ -4,20 +4,19 @@ The code in this repository demonstrates how mp3s can be streamed between web br
 
 ## DEMO
 
-A live demonstration is available at [heroku](https://webrtc-mp3-stream.herokuapp.com).
+A live demonstration is available at [deno.dev](rtc-mp3-stream.deno.dev).
 
 ## REQUIREMENTS
 
-To run the demo you need to have [node.js](http://nodejs.org/) installed.
+To run the demo you need to have [deno](https://deno.land/) installed.
 
 ## RUNNING THE DEMO
 
 Install and run this demo by:
 
 1. Cloning the repository: `git clone https://github.com/eelcocramer/webrtc-mp3-stream.git`
-2. Installing the dependencies: `npm install`
-3. Running the server: `node server.js`
-4. Opening the demo in the browser: [http://localhost:8080/index.html](http://localhost:8080/index.html)
+2. Running the server: `deno run --allow-net --allow-read main.ts`
+3. Opening the demo in the browser: [http://localhost:8080/index.html](http://localhost:8080/index.html)
 
 ## LICENSE
 
