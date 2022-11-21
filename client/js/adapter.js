@@ -13,7 +13,7 @@ function trace(text) {
     console.log((performance.now() / 1000).toFixed(3) + ": " + text);
 }
 
-if (navigator.mediaDevices.getUserMedia) {
+if (navigator.mediaDevices.getUserMedia && RTCPeerConnection) {
     console.log("This appears to be Firefox");
 
     webrtcDetectedBrowser = "firefox";
@@ -24,7 +24,7 @@ if (navigator.mediaDevices.getUserMedia) {
 
     // Creates Turn Uri with new turn format.
     createIceServer = function(turn_url, username, password) {
-        var iceServer = {
+        const iceServer = {
             'url': turn_url,
             'credential': password,
             'username': username
@@ -63,7 +63,7 @@ if (navigator.mediaDevices.getUserMedia) {
     // For pre-M28 chrome versions use old turn format, else use the new format.
     if (webrtcDetectedVersion < 28) {
         createIceServer = function(turn_url, username, password) {
-            var iceServer = {
+            const iceServer = {
                 'url': 'turn:' + username + '@' + turn_url,
                 'credential': password
             };
@@ -71,7 +71,7 @@ if (navigator.mediaDevices.getUserMedia) {
         };
     } else {
         createIceServer = function(turn_url, username, password) {
-            var iceServer = {
+            const iceServer = {
                 'url': turn_url,
                 'credential': password,
                 'username': username
@@ -81,7 +81,7 @@ if (navigator.mediaDevices.getUserMedia) {
     }
 
     // The RTCPeerConnection object.
-    RTCPeerConnection = webkitRTCPeerConnection;
+    RTCPeerConnection = RTCPeerConnection;
 
     // Get UserMedia (only difference is the prefix).
     // Code from Adam Barth.

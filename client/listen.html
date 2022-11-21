@@ -52,6 +52,9 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
     <div id="blockcontent">
         <article style="align: center;">
             <h1>Listen to the music</h1>
+            <div style="text-align: center">
+                <input type="button" onclick="connect()" value="connect!" class="button" />
+            </div>
 
             <div style="text-align: center;">
                 <h3 id='meta'>&nbsp;</h3>
@@ -104,7 +107,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 
     window.AudioContext = window.AudioContext || window.webkitAudioContext;
 
-    var context = new AudioContext();
+    var context = undefined;
 
     // UI elements that can be updated
     var meta = document.getElementById('meta');
@@ -126,8 +129,8 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 
     // references to the id of this listener and the id of the host.
     var myId;
+    var session = document.getElementById("session")
     var to = urlParams.id;
-
     // connect to the server
     import { io } from "https://cdn.socket.io/4.4.1/socket.io.esm.min.js";
     var socket = io();
@@ -136,16 +139,22 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
     socket.on('your-id', function(id) {
         myId = id;
         console.log('id = ' + id);
-        // send logon message to the host
-        socket.emit('logon', {
-            from: myId,
-            to: to
-        });
     });
 
     socket.on('error', function(message) {
         alert(message);
     });
+
+    window.connect = function() {
+        console.log("connecting...");
+        context = new AudioContext();
+
+        // send logon message to the host
+        socket.emit('logon', {
+            from: myId,
+            to: to
+        });
+    }
 
     // when a message is received add it to the peerconnection accordingly
     socket.on('message', function(message) {
