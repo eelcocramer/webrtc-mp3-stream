@@ -4,7 +4,7 @@ The code in this repository demonstrates how mp3s can be streamed between web br
 
 ## DEMO
 
-A live demonstration is available at [deno.dev](rtc-mp3-stream.deno.dev).
+A live demonstration is available at [deno.dev](https://webrtc-mp3-stream.deno.dev).
 
 ## REQUIREMENTS
 
