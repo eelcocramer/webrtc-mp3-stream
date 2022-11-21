@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2013, Eelco Cramer
+Copyright (c) 2022, Eelco Cramer
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
@@ -11,50 +11,38 @@ Redistribution and use in source and binary forms, with or without modification,
 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-var {
-    Server
-} = require('socket.io');
-var uuid = require('node-uuid');
-var static = require('node-static');
-var os = require('os');
+import { Server } from "https://deno.land/x/socket_io@0.2.0/mod.ts";
+import { serve } from "https://deno.land/std@0.165.0/http/server.ts";
+import staticFiles from "https://deno.land/x/static_files@1.1.6/mod.ts";
+import * as log from "https://deno.land/std@0.150.0/log/mod.ts";
 
-//
-// Create a node-static server instance to serve the './public' folder
-//
+const serveFiles = (req: Request) => staticFiles('client')({
+    request: req,
+    respondWith: (r: Response) => r
+})
 
-var file = new(static.Server)('./client');
+const io = new Server();
+const ioHandler = io.handler()
 
-var server = require('http').createServer(function(request, response) {
-    request.addListener('end', function() {
-        //
-        // Serve files!
-        //
-        file.serve(request, response);
-    }).resume();
-});
+const handler = (req, connInfo) => {
+    const url = new URL(req.url);
 
-// Create and configure socket.io
-//
-var io = new Server(server, {
-    log: false,
-    transports: ['polling']
-});
+    if (url.pathname.startsWith("/socket.io")) {
+        return ioHandler(req, connInfo);
+    } else {
+        return serveFiles(req);
+    }
+}
 
-var port = process.env.PORT || 8080;
+let sockets = [];
 
-server.listen(port);
-console.log('Listening on port: ' + port);
-
-// keeping track of connections
-var sockets = {};
-
-io.sockets.on('connection', function(socket) {
+io.on("connection", (socket) => {
     var id;
 
     // determine an identifier that is unique for us.
 
     do {
-        id = uuid.v4();
+        id = crypto.randomUUID();
     } while (sockets[id]);
 
     // we have a unique identifier that can be sent to the client
@@ -93,4 +81,7 @@ io.sockets.on('connection', function(socket) {
             socket.emit('error', 'Does not exsist at server.');
         }
     });
+
 });
+
+await serve(handler, { port: '8080' });

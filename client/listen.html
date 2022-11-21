@@ -82,7 +82,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
     </div>
 </body>
 
-<script lang="javascript">
+<script type="module">
     // getting the session id from the request URI
     var urlParams;
     (window.onpopstate = function() {
@@ -113,7 +113,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
     var rate = document.getElementById('rate');
 
     // check for required APIs
-    if (RTCPeerConnection) {} else {
+    if (webkitRTCPeerConnection) {} else {
         alert('The required APIs are not fully supported in this browser.');
     }
 
@@ -125,6 +125,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
     };
 
     // connect to the server
+    import { io } from "https://cdn.socket.io/4.4.1/socket.io.esm.min.js";
     var socket = io.connect();
 
     // references to the id of this listener and the id of the host.
@@ -159,7 +160,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
     };
 
     // creates a peer connection
-    var pc = new RTCPeerConnection(pc_config, {
+    var pc = new webkitRTCPeerConnection(pc_config, {
         optional: [{
             RtpDataChannels: true
         }]
