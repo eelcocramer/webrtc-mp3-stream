@@ -36,7 +36,6 @@ if (navigator.mediaDevices.getUserMedia) {
     attachMediaStream = function(element, stream) {
         console.log("Attaching media stream");
         element.mozSrcObject = stream;
-        element.muted = true;
         element.play();
     };
 

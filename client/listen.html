@@ -59,7 +59,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
             </div>
 
             <div style="text-align: center;">
-                <audio controls id="player" autoplay muted="muted"/>
+                <audio controls id="player" autoplay/>
                 Your browser does not support the audio element.
                 </audio>
             </div>
@@ -123,13 +123,14 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
         }]
     };
 
-    // connect to the server
-    import { io } from "https://cdn.socket.io/4.4.1/socket.io.esm.min.js";
-    var socket = io();
 
     // references to the id of this listener and the id of the host.
     var myId;
     var to = urlParams.id;
+
+    // connect to the server
+    import { io } from "https://cdn.socket.io/4.4.1/socket.io.esm.min.js";
+    var socket = io();
 
     // id of the listener is received from the server
     socket.on('your-id', function(id) {
@@ -144,6 +145,33 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 
     socket.on('error', function(message) {
         alert(message);
+    });
+
+    // when a message is received add it to the peerconnection accordingly
+    socket.on('message', function(message) {
+        console.log('Received message: ' + JSON.stringify(message.data));
+
+        if (message.data.type === 'candidate') {
+            if (message.data.candidate) {
+                console.log('adding an ice candidate');
+                pc.addIceCandidate(new RTCIceCandidate(message.data.candidate));
+            }
+        } else if (message.data.type === 'sdp') {
+            console.log('setting remote description and creating answer.')
+            pc.setRemoteDescription(new RTCSessionDescription(message.data.sdp), function() {
+                pc.createAnswer(function(desc) {
+                    pc.setLocalDescription(desc);
+                    socket.emit('message', {
+                        from: myId,
+                        to: message.from,
+                        data: {
+                            type: 'sdp',
+                            sdp: desc
+                        }
+                    });
+                }, failedCreateAnswer);
+            }, failedSetRemoteDescription);
+        }
     });
 
     window.onbeforeunload = function(e) {
@@ -193,32 +221,6 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
         });
     }
 
-    // when a message is received add it to the peerconnection accordingly
-    socket.on('message', function(message) {
-        console.log('Received message: ' + JSON.stringify(message.data));
-
-        if (message.data.type === 'candidate') {
-            if (message.data.candidate) {
-                console.log('adding an ice candidate');
-                pc.addIceCandidate(new RTCIceCandidate(message.data.candidate));
-            }
-        } else if (message.data.type === 'sdp') {
-            console.log('setting remote description and creating answer.')
-            pc.setRemoteDescription(new RTCSessionDescription(message.data.sdp), function() {
-                pc.createAnswer(function(desc) {
-                    pc.setLocalDescription(desc);
-                    socket.emit('message', {
-                        from: myId,
-                        to: message.from,
-                        data: {
-                            type: 'sdp',
-                            sdp: desc
-                        }
-                    });
-                }, failedCreateAnswer);
-            }, failedSetRemoteDescription);
-        }
-    });
 
     pc.onaddstream = gotRemoteStream;
 
