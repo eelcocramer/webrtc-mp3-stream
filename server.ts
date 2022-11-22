@@ -11,7 +11,7 @@ Redistribution and use in source and binary forms, with or without modification,
 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-import  { Server, serve, staticFiles } from "./deps.ts";
+import  { Server, Socket, serve, ConnInfo, staticFiles } from "./deps.ts";
 
 const serveFiles = (req: Request) => staticFiles('client')({
     request: req,
@@ -21,7 +21,7 @@ const serveFiles = (req: Request) => staticFiles('client')({
 const io = new Server();
 const ioHandler = io.handler()
 
-const handler = (req, connInfo) => {
+const handler = (req: Request, connInfo: ConnInfo) => {
     const url = new URL(req.url);
 
     if (url.pathname.startsWith("/socket.io")) {
@@ -31,32 +31,31 @@ const handler = (req, connInfo) => {
     }
 }
 
-let sockets = [];
+const sockets = new Map<string, Socket>();
 
 io.on("connection", (socket) => {
-    var id;
+    let id: string;
 
     // determine an identifier that is unique for us.
 
     do {
         id = crypto.randomUUID();
-    } while (sockets[id]);
+    } while (sockets.has(id));
 
     // we have a unique identifier that can be sent to the client
 
-    sockets[id] = socket;
+    sockets.set(id, socket);
     socket.emit('your-id', id);
 
     // remove references to the disconnected socket
     socket.on('disconnect', function() {
-        sockets[socket] = undefined;
-        delete sockets[socket];
+        sockets.delete(id)
     });
 
     // when a message is received forward it to the addressee
     socket.on('message', function(message) {
-        if (sockets[message.to]) {
-            sockets[message.to].emit('message', message);
+        if (sockets.has(message.to)) {
+            sockets.get(message.to)?.emit('message', message);
         } else {
             socket.emit('disconnected', message.from);
         }
@@ -64,16 +63,16 @@ io.on("connection", (socket) => {
 
     // when a listener logs on let the media streaming know about it
     socket.on('logon', function(message) {
-        if (sockets[message.to]) {
-            sockets[message.to].emit('logon', message);
+        if (sockets.has(message.to)) {
+            sockets.get(message.to)?.emit('logon', message);
         } else {
             socket.emit('error', 'Does not exsist at server.');
         }
     });
 
     socket.on('logoff', function(message) {
-        if (sockets[message.to]) {
-            sockets[message.to].emit('logoff', message);
+        if (sockets.has(message.to)) {
+            sockets.get(message.to)?.emit('logoff', message);
         } else {
             socket.emit('error', 'Does not exsist at server.');
         }
@@ -81,4 +80,4 @@ io.on("connection", (socket) => {
 
 });
 
-await serve(handler, { port: '8080' });
+await serve(handler, { port: 8080 });
