@@ -80,4 +80,4 @@ io.on("connection", (socket) => {
 
 });
 
-await serve(handler, { port: 8080 });
+await serve(handler, { port: 80 });
